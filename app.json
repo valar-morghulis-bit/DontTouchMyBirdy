@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "DontTouchMyBirdy",
-    "slug": "DontTouchMyBirdy",
+    "name": "flappy-birds-react-native",
+    "slug": "flappy-birds-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
