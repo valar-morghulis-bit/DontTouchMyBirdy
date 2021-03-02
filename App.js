@@ -59,33 +59,12 @@ export default function App() {
     })
     const macAddress = await Network.getMacAddressAsync("wlan0");
     console.log(macAddress)
-
     if (macAddress) {
-      // firebase
-      //   .auth()
-      //   .signInWithEmailAndPassword("doesnt@matter.com", macAddress)
-      //   .then(() => {
-      //     setRegState({
-      //       showNav: false,
-      //       showMsg: true,
-      //       color: "yellow",
-      //       msg: "Login Success",
-      //     });
-      //   })
-      //   .catch((err) => {
-          // setRegState({
-          //   ...registerState,
-          //   showMsg: true,
-          //   color: "pink",
-          //   msg: "You are not registered honey",
-          // })
-      //   });
-
       firebase
         .database()
         .ref('users')
-        .orderByChild(macAddress)
-        // .equalTo(macAddress)
+        // .orderByChild(macAddress)
+        .child(macAddress)
         .once("value")
         .then(snapshot => {
           if(snapshot.exists()) {
@@ -103,7 +82,6 @@ export default function App() {
           }
         })
         .catch(err => console.log(err))
-
     }
   }
 
@@ -235,7 +213,7 @@ export default function App() {
   })
 
   const jump = () => {
-    if (!isGameOver && (birdBottom < screenHeight)) {
+    if (!isGameOver && (birdBottom < screenHeight) && !registerState.showNav) {
       setBirdBottom(birdBottom => birdBottom + 50)
     }
   }
