@@ -58,30 +58,62 @@ export default function App() {
       msg: "Dude Loading..."
     })
     const macAddress = await Network.getMacAddressAsync("wlan0");
+    console.log(macAddress)
+
     if (macAddress) {
+      // firebase
+      //   .auth()
+      //   .signInWithEmailAndPassword("doesnt@matter.com", macAddress)
+      //   .then(() => {
+      //     setRegState({
+      //       showNav: false,
+      //       showMsg: true,
+      //       color: "yellow",
+      //       msg: "Login Success",
+      //     });
+      //   })
+      //   .catch((err) => {
+          // setRegState({
+          //   ...registerState,
+          //   showMsg: true,
+          //   color: "pink",
+          //   msg: "You are not registered honey",
+          // })
+      //   });
+
       firebase
-        .auth()
-        .signInWithEmailAndPassword("doesnt@matter.com", macAddress)
-        .then(() => {
-          setRegState({
-            showNav: false,
-            showMsg: true,
-            color: "yellow",
-            msg: "Login Success",
-          });
+        .database()
+        .ref('users')
+        .orderByChild(macAddress)
+        // .equalTo(macAddress)
+        .once("value")
+        .then(snapshot => {
+          if(snapshot.exists()) {
+            setRegState({
+              ...registerState,
+              showNav: false
+            })
+          } else {
+            setRegState({
+              ...registerState,
+              showMsg: true,
+              color: "pink",
+              msg: "You are not registered honey",
+            })
+          }
         })
-        .catch((err) => {
-          setRegState({
-            ...registerState,
-            showMsg: true,
-            color: "pink",
-            msg: "You are not registered honey",
-          })
-        });
+        .catch(err => console.log(err))
+
     }
   }
 
   async function register() {
+    setRegState({
+      ...registerState,
+      showMsg: true,
+      color: "orange",
+      msg: "Dude Loading..."
+    })
     const macAddress = await Network.getMacAddressAsync("wlan0");
     userName
     ? firebase
@@ -92,31 +124,23 @@ export default function App() {
       .once("value")
       .then(snapshot => {
         if (!snapshot.exists() && (userName !== "") && !userName.includes(" ") && macAddress) {// if null then unique
+          const user = {
+            userName: userName,
+            highestScore: 0,
+          };
           firebase
-          .auth()
-          .createUserWithEmailAndPassword("doesnt@matter.com", macAddress)
-          .then((arg) => {
-            const user = {
-              userName: userName,
-              highestScore: 0,
-            };
-            firebase
-              .database()
-              .ref('users/' + arg.user?.uid)
-              .update(user)
-              .then(snapshot => {
-                setRegState({
-                  ...registerState,
-                  showNav: false
-                })
-              })
-              .catch(err => {
-                console.log("SIGN UP FAILED", err);
-              })
-          })
-          .catch((err) => {
-            console.log(err)
-          });
+            .database()
+            .ref('users/' + macAddress)
+            .update(user)
+            .then(snapshot => {
+              setRegState({
+                ...registerState,
+                showNav: false
+              });
+            })
+            .catch(err => {
+              console.log("SIGN UP FAILED", err);
+            })
         } else {
           setRegState({
             ...registerState,
@@ -133,182 +157,95 @@ export default function App() {
         color: "pink",
         msg: "Invalid user name honey",
       })
+}
+
+  //start bird falling
+  useEffect(() => {
+    if (!registerState.showNav) {
+      if (birdBottom > 0) {
+        gameTimerId = setInterval(() => {
+          setBirdBottom(birdBottom => birdBottom - gravity)
+        },30)
+
+        return () => {
+          clearInterval(gameTimerId)
+        }
+      }
+      //if i dont have birdBottom as a dependecy, it wont stop
+    }
+  }, [birdBottom, registerState.showNav])
+
+  //start first obstacle
+  useEffect(() => {
+    if (!registerState.showNav) {
+      console.log("first")
+      if (obstaclesLeft > -60) {
+        obstaclesTimerId = setInterval(() => {
+          setObstaclesLeft(obstaclesLeft => obstaclesLeft - 5)
+        }, 30)
+        return () => {
+          clearInterval(obstaclesTimerId)
+        }
+      } else {
+        setScore(score => score +1)
+        setObstaclesLeft(screenWidth)
+        setObstaclesNegHeight( - Math.random() * 100)
+      }
+    }
+  }, [obstaclesLeft, registerState.showNav]);
+
+    //start second obstacle
+  useEffect(() => {
+    if (!registerState.showNav) {
+      console.log("second")
+      if (obstaclesLeftTwo > -60) {
+        obstaclesTimerIdTwo = setInterval(() => {
+          setObstaclesLeftTwo(obstaclesLeftTwo => obstaclesLeftTwo - 5)
+        }, 30)
+          return () => {
+            clearInterval(obstaclesTimerIdTwo)
+          }
+      } else {
+          setScore(score => score +1)
+          setObstaclesLeftTwo(screenWidth)
+          setObstaclesNegHeightTwo( - Math.random() * 100)
+        }
+    }
+  }, [obstaclesLeftTwo, registerState.showNav]);
+
+  //check for collisions
+  useEffect(() => {
+    if (!registerState.showNav) {
+      console.log("collission")
+      if (
+        ((birdBottom < (obstaclesNegHeight + obstacleHeight + 30) ||
+        birdBottom > (obstaclesNegHeight + obstacleHeight + gap -30)) &&
+        (obstaclesLeft > screenWidth/2 -30 && obstaclesLeft < screenWidth/2 + 30 )
+        )
+        || 
+        ((birdBottom < (obstaclesNegHeightTwo + obstacleHeight + 30) ||
+        birdBottom > (obstaclesNegHeightTwo + obstacleHeight + gap -30)) &&
+        (obstaclesLeftTwo > screenWidth/2 -30 && obstaclesLeftTwo < screenWidth/2 + 30 )
+        )
+        ) 
+        {
+        gameOver()
+      }
+    }
+  })
+
+  const jump = () => {
+    if (!isGameOver && (birdBottom < screenHeight)) {
+      setBirdBottom(birdBottom => birdBottom + 50)
+    }
   }
 
-
-
-
-
-
-    //  //start bird falling
-    //  useEffect(() => {
-    //   if (birdBottom > 0) {
-    //     gameTimerId = setInterval(() => {
-    //       setBirdBottom(birdBottom => birdBottom - gravity)
-    //     },30)
-    
-    //     return () => {
-    //       clearInterval(gameTimerId)
-    //     }
-    //   }
-    //   //if i dont have birdBottom as a dependecy, it wont stop
-    // }, [birdBottom])
-
-    // const jump = () => {
-    //   if (!isGameOver && (birdBottom < screenHeight)) {
-    //     setBirdBottom(birdBottom => birdBottom + 50)
-    //   }
-    // }
-
-    // //start first obstacle
-    // useEffect(() => {
-    //   if (obstaclesLeft > -60) {
-    //     obstaclesTimerId = setInterval(() => {
-    //       setObstaclesLeft(obstaclesLeft => obstaclesLeft - 5)
-    //     }, 30)
-    //     return () => {
-    //       clearInterval(obstaclesTimerId)
-    //     }
-    //   } else {
-    //     setScore(score => score +1)
-    //     setObstaclesLeft(screenWidth)
-    //     setObstaclesNegHeight( - Math.random() * 100)
-    //   }
-    // }, [obstaclesLeft])
-
-    // //start second obstacle
-    // useEffect(() => {
-    //   if (obstaclesLeftTwo > -60) {
-    //     obstaclesTimerIdTwo = setInterval(() => {
-    //       setObstaclesLeftTwo(obstaclesLeftTwo => obstaclesLeftTwo - 5)
-    //     }, 30)
-    //       return () => {
-    //         clearInterval(obstaclesTimerIdTwo)
-    //       }
-    //     } else {
-    //         setScore(score => score +1)
-    //         setObstaclesLeftTwo(screenWidth)
-    //         setObstaclesNegHeightTwo( - Math.random() * 100)
-    //       }
-    // }, [obstaclesLeftTwo])
-
-    // //check for collisions
-    // useEffect(() => {
-    //   if (
-    //     ((birdBottom < (obstaclesNegHeight + obstacleHeight + 30) ||
-    //     birdBottom > (obstaclesNegHeight + obstacleHeight + gap -30)) &&
-    //     (obstaclesLeft > screenWidth/2 -30 && obstaclesLeft < screenWidth/2 + 30 )
-    //     )
-    //     || 
-    //     ((birdBottom < (obstaclesNegHeightTwo + obstacleHeight + 30) ||
-    //     birdBottom > (obstaclesNegHeightTwo + obstacleHeight + gap -30)) &&
-    //     (obstaclesLeftTwo > screenWidth/2 -30 && obstaclesLeftTwo < screenWidth/2 + 30 )
-    //     )
-    //     ) 
-    //     {
-    //     gameOver()
-    //   }
-    // })
-
-
-
-
-
-
-
-
-
-    //start bird falling
-    useEffect(() => {
-      if (!registerState.showNav) {
-        if (birdBottom > 0) {
-          gameTimerId = setInterval(() => {
-            setBirdBottom(birdBottom => birdBottom - gravity)
-          },30)
-
-          return () => {
-            clearInterval(gameTimerId)
-          }
-        }
-        //if i dont have birdBottom as a dependecy, it wont stop
-      }
-    }, [birdBottom, registerState.showNav])
-
-    //start first obstacle
-    useEffect(() => {
-      if (!registerState.showNav) {
-        console.log("first")
-        if (obstaclesLeft > -60) {
-          obstaclesTimerId = setInterval(() => {
-            setObstaclesLeft(obstaclesLeft => obstaclesLeft - 5)
-          }, 30)
-          return () => {
-            clearInterval(obstaclesTimerId)
-          }
-        } else {
-          setScore(score => score +1)
-          setObstaclesLeft(screenWidth)
-          setObstaclesNegHeight( - Math.random() * 100)
-        }
-      }
-    }, [obstaclesLeft, registerState.showNav]);
-
-     //start second obstacle
-    useEffect(() => {
-      if (!registerState.showNav) {
-        console.log("second")
-        if (obstaclesLeftTwo > -60) {
-          obstaclesTimerIdTwo = setInterval(() => {
-            setObstaclesLeftTwo(obstaclesLeftTwo => obstaclesLeftTwo - 5)
-          }, 30)
-            return () => {
-              clearInterval(obstaclesTimerIdTwo)
-            }
-        } else {
-            setScore(score => score +1)
-            setObstaclesLeftTwo(screenWidth)
-            setObstaclesNegHeightTwo( - Math.random() * 100)
-          }
-      }
-    }, [obstaclesLeftTwo, registerState.showNav]);
-
-    //check for collisions
-    useEffect(() => {
-      if (!registerState.showNav) {
-        console.log("collission")
-        if (
-          ((birdBottom < (obstaclesNegHeight + obstacleHeight + 30) ||
-          birdBottom > (obstaclesNegHeight + obstacleHeight + gap -30)) &&
-          (obstaclesLeft > screenWidth/2 -30 && obstaclesLeft < screenWidth/2 + 30 )
-          )
-          || 
-          ((birdBottom < (obstaclesNegHeightTwo + obstacleHeight + 30) ||
-          birdBottom > (obstaclesNegHeightTwo + obstacleHeight + gap -30)) &&
-          (obstaclesLeftTwo > screenWidth/2 -30 && obstaclesLeftTwo < screenWidth/2 + 30 )
-          )
-          ) 
-          {
-          gameOver()
-        }
-      }
-    })
-
-
-
-
-
-   const jump = () => {
-      if (!isGameOver && (birdBottom < screenHeight)) {
-        setBirdBottom(birdBottom => birdBottom + 50)
-      }
-    }
-
-    const gameOver = () => {
-      clearInterval(gameTimerId)
-      clearInterval(obstaclesTimerId)
-      clearInterval(obstaclesTimerIdTwo)
-      setIsGameOver(true)
-    }
+  const gameOver = () => {
+    clearInterval(gameTimerId)
+    clearInterval(obstaclesTimerId)
+    clearInterval(obstaclesTimerIdTwo)
+    setIsGameOver(true)
+  }
   
   return (
     registerState.showNav
