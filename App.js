@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Dimensions, TouchableWithoutFeedback, TextInput, Button, LogBox } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableWithoutFeedback, TextInput, Button, LogBox, StatusBar, FlatList } from 'react-native';
 import Bird from './components/Bird'
 import Obstacles from './components/Obstacles'
 import * as Network from 'expo-network';
@@ -36,6 +36,11 @@ export default function App() {
     color: "pink",
     msg: "",
   });
+  const [menu, setMenu] = useState({
+    active: false,
+    records: null,
+    hallOffame: []
+  })
   const gravity = 3
   let obstacleWidth = 60
   let obstacleHeight = 300
@@ -63,7 +68,6 @@ export default function App() {
       firebase
         .database()
         .ref('users')
-        // .orderByChild(macAddress)
         .child(macAddress)
         .once("value")
         .then(snapshot => {
@@ -135,7 +139,23 @@ export default function App() {
         color: "pink",
         msg: "Invalid user name honey",
       })
-}
+  }
+
+  const getRecords = () => {
+    firebase
+      .database()
+      .ref('/users')
+      .once('value')
+      .then(snapshot => {
+        records = snapshot.val();
+        const arr = Object.keys(records).sort((a,b) => records[b].highestScore - records[a].highestScore);
+        setMenu({
+          active: true,
+          records: records,
+          hallOffame: arr
+        });
+      })
+  }
 
   //start bird falling
   useEffect(() => {
@@ -156,7 +176,6 @@ export default function App() {
   //start first obstacle
   useEffect(() => {
     if (!registerState.showNav) {
-      console.log("first")
       if (obstaclesLeft > -60) {
         obstaclesTimerId = setInterval(() => {
           setObstaclesLeft(obstaclesLeft => obstaclesLeft - 5)
@@ -175,7 +194,6 @@ export default function App() {
     //start second obstacle
   useEffect(() => {
     if (!registerState.showNav) {
-      console.log("second")
       if (obstaclesLeftTwo > -60) {
         obstaclesTimerIdTwo = setInterval(() => {
           setObstaclesLeftTwo(obstaclesLeftTwo => obstaclesLeftTwo - 5)
@@ -194,7 +212,6 @@ export default function App() {
   //check for collisions
   useEffect(() => {
     if (!registerState.showNav) {
-      console.log("collission")
       if (
         ((birdBottom < (obstaclesNegHeight + obstacleHeight + 30) ||
         birdBottom > (obstaclesNegHeight + obstacleHeight + gap -30)) &&
@@ -208,6 +225,7 @@ export default function App() {
         ) 
         {
         gameOver()
+        isNewScore()
       }
     }
   })
@@ -218,11 +236,54 @@ export default function App() {
     }
   }
 
+
+  let overOnce = true
+  async function isNewScore() {
+    const macAddress = await Network.getMacAddressAsync("wlan0");
+
+    getRecords();
+
+    const clear = setInterval(() => {
+      if (menu.records && overOnce) {
+        const recordedScore = menu.records[macAddress]
+        if (score > recordedScore.highestScore) {
+          firebase
+            .database()
+            .ref('users/' + macAddress)
+            .update({ highestScore: score })
+        }
+        clearInterval(clear);
+        overOnce = false;
+      }
+      if (!overOnce) {
+        clearInterval(clear);
+      }
+    }, 1000)
+    
+  }
+
   const gameOver = () => {
     clearInterval(gameTimerId)
     clearInterval(obstaclesTimerId)
     clearInterval(obstaclesTimerIdTwo)
     setIsGameOver(true)
+  }
+
+
+
+  const openMenu = () => {
+    getRecords();
+    setRegState({
+      ...registerState,
+      showNav: true,
+    });
+  }
+
+  const closeMenu = () => {
+    setRegState({
+      ...registerState,
+      showNav: false,
+    });
   }
   
   return (
@@ -231,30 +292,78 @@ export default function App() {
         position: "absolute",
         width: "100%",
         height: "100%",
+        padding: 20,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "green",
       }}>
-        { registerState.showMsg && <Text style={{
-          width: "100%",
-          color: "red",
-          textAlign: "center",
-          backgroundColor: registerState.color
-        }}>{registerState.msg}</Text> }
-        <TextInput
-          onChangeText={(text => userName = text)}
-          placeholder="User Name"
-          style={{
-            width: "80%",
-            fontSize: 30,
-            textAlign: "center",
-            borderWidth: 3,
-            borderColor: "gray",
-            backgroundColor: "white",
-          }}></TextInput>
-          <Button 
-            onPress={() => register()}
-            title="Enter baby"></Button>
+        {
+          !menu.active
+          ? <>
+              { 
+                registerState.showMsg && 
+                  <Text style={{
+                    width: "100%",
+                    color: "red",
+                    textAlign: "center",
+                    backgroundColor: registerState.color
+                  }}>{registerState.msg}</Text> 
+              }
+              <TextInput
+                onChangeText={(text => userName = text)}
+                placeholder="User Name"
+                style={{
+                  width: "80%",
+                  fontSize: 30,
+                  textAlign: "center",
+                  borderWidth: 3,
+                  borderColor: "gray",
+                  backgroundColor: "white",
+                }}></TextInput>
+              <Button 
+                onPress={() => register()}
+                title="Enter baby"></Button>
+            </>
+          : <>
+              <Button 
+                onPress={() => closeMenu()}
+                title={"Back"}
+               />
+              <FlatList
+                data={menu.hallOffame}
+                renderItem={({ item }) => {
+                  return (
+                    menu.records
+                    ? <View style={{
+                        justifyContent: "center",
+                        flexDirection: "row",
+                        borderTopWidth: 1,
+                        borderColor: "#e0e0e0",
+                        backgroundColor: "orange", 
+                        paddingTop: 10,
+                        paddingBottom: 10,
+                        width: 200
+                      }}>
+                        <Text style={{ 
+                          fontSize: 18, 
+                          color: "white", 
+                        }}>{menu.records[item].userName}:</Text>
+                        <Text style={{ 
+                          marginLeft: 10,
+                          fontSize: 20, 
+                          color: "white", 
+                          fontStyle: "italic",
+                          fontWeight: "bold",
+                        }}>{menu.records[item].highestScore}</Text>
+                      </View>
+                    : null
+                  );
+                }}
+                keyExtractor={(item, index) => index.toString()} />
+              <StatusBar hidden={true}></StatusBar>
+            </>
+        }
+      
       </View>
     : <TouchableWithoutFeedback onPress={jump}>
       <View style={styles.container}>
@@ -270,6 +379,14 @@ export default function App() {
             <Text style={{fontSize: 30}}>{score}</Text>
           </View>
         }
+        <Button
+          onPress={() => openMenu()}
+          title="Menu"
+          style={{
+            position: "absolute",
+            zIndex: 99999,
+          }}
+        />
         <Bird 
           birdBottom = {birdBottom} 
           birdLeft = {birdLeft}
@@ -290,6 +407,7 @@ export default function App() {
           gap = {gap}
           obstaclesLeft = {obstaclesLeftTwo}
         />
+        <StatusBar hidden={true}></StatusBar>
       </View>
     </TouchableWithoutFeedback>
   )
