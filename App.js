@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Dimensions, TouchableWithoutFeedback, TextInput, Button, LogBox, StatusBar, FlatList } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableWithoutFeedback, TextInput, Button, LogBox, StatusBar, FlatList, ImageBackground } from 'react-native';
 import Bird from './components/Bird'
 import Obstacles from './components/Obstacles'
 import * as Network from 'expo-network';
@@ -292,11 +292,18 @@ export default function App() {
         position: "absolute",
         width: "100%",
         height: "100%",
-        padding: 20,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "green",
+        // justifyContent: "center",
+        // alignItems: "center",
       }}>
+        <ImageBackground
+          source={require("./assets/bg.png")}
+          style={{
+            width: "100%",
+            height: "100%",
+            resizeMode: "cover",
+            justifyContent: "center",
+            alignItems: "center",
+          }}>
         {
           !menu.active
           ? <>
@@ -363,7 +370,7 @@ export default function App() {
               <StatusBar hidden={true}></StatusBar>
             </>
         }
-      
+        </ImageBackground>
       </View>
     : <TouchableWithoutFeedback onPress={jump}>
       <View style={styles.container}>
@@ -384,29 +391,38 @@ export default function App() {
           title="Menu"
           style={{
             position: "absolute",
+            top: 0,
             zIndex: 99999,
           }}
         />
-        <Bird 
-          birdBottom = {birdBottom} 
-          birdLeft = {birdLeft}
-        />
-        <Obstacles 
-          color={'green'}
-          obstacleWidth = {obstacleWidth}
-          obstacleHeight = {obstacleHeight}
-          randomBottom = {obstaclesNegHeight}
-          gap = {gap}
-          obstaclesLeft = {obstaclesLeft}
-        />
-        <Obstacles 
-          color={'yellow'}
-          obstacleWidth = {obstacleWidth}
-          obstacleHeight = {obstacleHeight}
-          randomBottom = {obstaclesNegHeightTwo}
-          gap = {gap}
-          obstaclesLeft = {obstaclesLeftTwo}
-        />
+        <ImageBackground
+          source={require("./assets/bg.png")}
+          style={{
+            flex: 1,
+            resizeMode: "cover",
+            justifyContent: "center"
+          }}>
+          <Bird 
+            birdBottom = {birdBottom} 
+            birdLeft = {birdLeft}
+          />
+          <Obstacles 
+            color={'green'}
+            obstacleWidth = {obstacleWidth}
+            obstacleHeight = {obstacleHeight}
+            randomBottom = {obstaclesNegHeight}
+            gap = {gap}
+            obstaclesLeft = {obstaclesLeft}
+          />
+          <Obstacles 
+            color={'yellow'}
+            obstacleWidth = {obstacleWidth}
+            obstacleHeight = {obstacleHeight}
+            randomBottom = {obstaclesNegHeightTwo}
+            gap = {gap}
+            obstaclesLeft = {obstaclesLeftTwo}
+          />
+        </ImageBackground>
         <StatusBar hidden={true}></StatusBar>
       </View>
     </TouchableWithoutFeedback>
@@ -416,7 +432,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'red',
+    // backgroundColor: 'red',
   },
 })
 
